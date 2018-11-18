@@ -2,8 +2,11 @@
 	position: relative;
 	user-select: none;
 }
+.overview + .overview {
+	margin-top: 30px;
+}
 .overview-scroller {
-	width: 800px;
+	width: 1053px;
 	overflow-x: scroll;
 	overflow-y: visible;
 	margin-left:111px;
@@ -16,14 +19,21 @@
 	vertical-align: middle;
 	word-wrap: nowrap;
 }
+
+.overview-total .overview-scroller {
+	width:auto;
+	overflow-x:visible;
+	padding:0;
+}
+
 .overview-table th:first-child,
 .overview-table td:first-child {
 	position:absolute;
 	width:100px;
 	z-index:1;
 	left:0;
+	text-align:right;
 }
-
 .overview-table th, 
 .overview-table td {
 	border: 1px dotted rgba(0,0,0,0.25);
@@ -31,7 +41,12 @@
 	min-width: 60px;
 	position: relative;
 }
-.overview-table tbody tr:hover td:before{
+.overview-total .overview-table th, 
+.overview-total .overview-table td {
+	min-width:70px;
+}
+
+.overview:not(.overview-total) .overview-table tbody tr:hover td:before{
 	content: " ";
 	display:block;
 	position: absolute;
@@ -41,22 +56,28 @@
 	height: 100%;
 	background-color: rgba(150,150,150,0.25);
 } 
-.overview-table tbody td:not(.overview-month):hover {
+.overview-table tbody td:not(.overview-month):not(.overview-title-column):not(.overview-total-column):not(.overview-spending-title):not(.overview-spending-total):not(.overview-revenue-title):not(.overview-revenue-total):hover {
 	border: 1px solid rgba(0,0,0,0.5);
 	cursor:pointer;
 }
 
 .overview-table .overview-title-row th,
-.overview-table .overview-totals-row td {
+.overview-table td.overview-title-column,
+.overview-table .overview-total-row td,
+.overview-table  td.overview-total-column {
 	color: #fff;
 	font-weight: 800;
+}
+.overview-table .overview-title-row th,
+.overview-table .overview-total-row td,
+.overview-table  td.overview-total-column {
 	border:none;
 }
 .overview-table .overview-subtitle-row th:not(.overview-year) {
 	font-weight: 600;
 	border-top: none;
 }
-.overview-table .overview-subtotals-row td:not(.overview-subtotals) {
+.overview-table .overview-subtotal-row td:not(.overview-subtotal) {
 	font-weight: 600;
 	border-bottom: none;
 }
@@ -64,33 +85,69 @@
 	border: none;
 }
 .overview-table .overview-year {
-	text-align: right;
 	border-bottom: none;
 }
 .overview-table .overview-month,
-.overview-table .overview-subtotals {
-	text-align: right;
+.overview-table .overview-subtotal {
 	font-weight: 600;
 }
-.overview-table .overview-totals-row .overview-totals-tag {
+.overview-table .overview-total-row .overview-total-tag {
 	text-align: right;
+}
+
+.overview-spending-title,
+.overview-spending-total {
+	color: red;
+	font-weight:600;
+}
+.overview-revenue-title,
+.overview-revenue-total {
+	color: green;
+	font-weight:600;
+	border-bottom:1px solid #aaa!important;
+}
+.overview-total-total-row .overview-total-title {
+	font-weight:700;
+	background:#aaa;
+	color:#fff;
+	border-top:none!important;
+}
+.overview-total-total-row .overview-total-total {
+	border-left: 1px solid #aaa;
+}
+.overview-total-total-row {
+	font-weight:600;
+	border:solid 1px #aaa;
+	background:#f6f6f6;
 }
 
 .overview-table .overview-transport { background-color: #f8e1f1; }
 .overview-table .overview-title-row .overview-transport,
-.overview-table .overview-totals-row .overview-transport { background-color: #ff00ff; }
+.overview-table .overview-title-column.overview-transport,
+.overview-table .overview-total-row .overview-transport,
+.overview-table .overview-total-column.overview-transport { background-color: #ff00ff; }
 .overview-table .overview-nourriture { background-color: #c9daf8; }
 .overview-table .overview-title-row .overview-nourriture,
-.overview-table .overview-totals-row .overview-nourriture { background-color: #4a86e6; }
+.overview-table .overview-title-column.overview-nourriture,
+.overview-table .overview-total-row .overview-nourriture,
+.overview-table .overview-total-column.overview-nourriture { background-color: #4a86e6; }
 .overview-table .overview-services { background-color: #fbe5cd; }
 .overview-table .overview-title-row .overview-services,
-.overview-table .overview-totals-row .overview-services { background-color: #fe9900; }
+.overview-table .overview-title-column.overview-services,
+.overview-table .overview-total-row .overview-services,
+.overview-table .overview-total-column.overview-services { background-color: #fe9900; }
 .overview-table .overview-habitation { background-color: #f4cccc; }
 .overview-table .overview-title-row .overview-habitation,
-.overview-table .overview-totals-row .overview-habitation { background-color: #fd0005; }
+.overview-table .overview-title-column.overview-habitation,
+.overview-table .overview-total-row .overview-habitation,
+.overview-table .overview-total-column.overview-habitation { background-color: #fd0005; }
 .overview-table .overview-assurances { background-color: #dad2e9; }
 .overview-table .overview-title-row .overview-assurances,
-.overview-table .overview-totals-row .overview-assurances { background-color: #9b00fc; }
+.overview-table .overview-title-column.overview-assurances,
+.overview-table .overview-total-row .overview-assurances,
+.overview-table .overview-total-column.overview-assurances { background-color: #9b00fc; }
 .overview-table .overview-personnel { background-color: #d8ead0; }
 .overview-table .overview-title-row .overview-personnel,
-.overview-table .overview-totals-row .overview-personnel { background-color: #68a94f; }
+.overview-table .overview-title-column.overview-personnel,
+.overview-table .overview-total-row .overview-personnel,
+.overview-table .overview-total-column.overview-personnel { background-color: #68a94f; }

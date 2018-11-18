@@ -49,7 +49,7 @@ class App extends React.Component {
 
 		// Init states
 		this.state = {
-			year: 2020,
+			year: 2023,
 			months: months, 
 			categories: categories, 
 			columns: columns,
@@ -99,13 +99,19 @@ class App extends React.Component {
 		let keys = [];
 		keys.push(this.state.year+"."+category+"-"+tag);
 		keys.push(this.state.year+"."+category);
+		keys.push(this.state.year+".spending");
 		keys.push(period+"."+category+"-"+tag);
 		keys.push(period+"."+category);
+		keys.push(period+".spending");
 
 		let amount = Math.random()*100;
 		for (let i=0; i<keys.length; i++) {
 			data[keys[i]] = (data[keys[i]])? data[keys[i]] + amount : amount;
 		}
+
+		// Different calculation for total
+		data[period+".total"] = (data[period+".total"])? data[period+".total"] - amount : -amount;
+		data[this.state.year+".total"] = (data[this.state.year+".total"])? data[this.state.year+".total"] - amount : -amount;
 
 		this.setState({ overviewData: data });
 
@@ -125,7 +131,7 @@ class App extends React.Component {
 
 	    DB.saveOverviewData(this.state.year, this.state.overviewData)
 	    .then((res) => {
-	    	if(this.state.overviewDataStatus.upToDate == false){
+	    	if(this.state.overviewDataStatus.upToDate === false){
 	    		this.saveOverviewData();
 	    	}else{
 		      	let overviewDataStatus = {...this.state.overviewDataStatus}
