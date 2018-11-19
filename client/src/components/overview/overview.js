@@ -27,7 +27,7 @@ class Overview extends React.Component {
 								<th className="overview-hidden">&nbsp;</th>
 								{months.map((month, i) => (
 									<th 
-										key={"2-"+year+""+((i<9)?"0"+(i+1):(i+1))} 
+										key={"2-"+year+""+((i<9)?"0"+(i+1):(i+1))+"-month"} 
 										className={"overview-month"}
 									>
 										{month}
@@ -38,7 +38,7 @@ class Overview extends React.Component {
 						</thead>
 						<tbody>
 							{categories.map((category, i) => (
-								<tr key={"2-"+year+"."+category.tag+"row"} className="overview-data-row">
+								<tr key={"2-"+year+"."+category.tag+"-row"} className="overview-data-row">
 									<td key={"2-"+year+"."+category.tag+"-tag"} className={"overview-title-column overview-"+category.tag}>{category.name}</td>
 									{months.map((column, j) => {
 										const key = year+""+((j<9)?"0"+(j+1):(j+1))+"."+category.tag;
@@ -68,17 +68,17 @@ class Overview extends React.Component {
 								{months.map((column, j) => {
 									const key = year+""+((j<9)?"0"+(j+1):(j+1))+".revenue";
 									return (											
-										<td key={"2-"+key} className={"overview-revenue"}>
+										<td key={"2-"+key} className="overview-revenue">
 											{this.getOverviewData(data, key)}
 										</td>
 									)
 								})}
-								<td key={"2-"+year+".revenue-total"} className={"overview-revenue-total"}>{this.getOverviewData(data, year+".revenue")}</td>
+								<td key={"2-"+year+".revenue-total"} className="overview-revenue-total">{this.getOverviewData(data, year+".revenue")}</td>
 							</tr>
 						</tbody>	
 						<tfoot>
-							<tr key={"2-"+year+".total"} className="overview-total-total-row">
-								<td key={"2-"+year+".total-title"} className={"overview-total-title"}>TOTAL</td>
+							<tr key={"2-"+year+".total-row"} className="overview-total-total-row">
+								<td key={"2-"+year+".total-title"} className="overview-total-title">TOTAL</td>
 								{months.map((column, j) => {
 									const key = year+""+((j<9)?"0"+(j+1):(j+1))+".total";
 									return (											
@@ -87,7 +87,7 @@ class Overview extends React.Component {
 										</td>
 									)
 								})}
-								<td key={"2-"+year+".total-total"} className={"overview-total-total"}>{this.getOverviewData(data, year+".total")}</td>
+								<td key={"2-"+year+".total"} className="overview-total-total">{this.getOverviewData(data, year+".total")}</td>
 							</tr>
 						</tfoot>
 					</table>

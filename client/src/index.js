@@ -2,6 +2,7 @@ import React from 'react';
 import ReactDOM from 'react-dom';
 import DB from './modules/database.js'
 import Overview from './components/overview/overview.js'
+import UI from './components/ui/ui.js';
 import './index.css';
 
 
@@ -49,7 +50,7 @@ class App extends React.Component {
 
 		// Init states
 		this.state = {
-			year: 2023,
+			year: (new Date()).getFullYear(),
 			months: months, 
 			categories: categories, 
 			columns: columns,
@@ -66,21 +67,28 @@ class App extends React.Component {
 
 	// Load data 
 	componentDidMount() {
-
-		// Load overview data
-	    DB.getOverviewData(this.state.year)
-	      	.then((res) => {
-	      		let overviewDataStatus = {...this.state.overviewDataStatus}
-	      		overviewDataStatus.loaded = true;
-	      		overviewDataStatus.upToDate = true;
-	      		this.setState({ 
-	      			overviewData: res,
-	      			overviewDataStatus: overviewDataStatus
-	      		})
-	      	})
-	      	.catch(err => console.log(err));
-
+	    DB.loadOverviewData(this.state.year, this);
 	}
+
+	// Switch year
+	handleYearChange(year){
+		this.setState({
+			overviewDataStatus: {
+				loaded: false,
+				upToDate: false,
+				saving: false,
+			}
+		})
+
+		// Load new overview data
+	    DB.loadOverviewData(year, this);
+	}
+
+	// Clicks on the FAB button
+	handleFABClick(){
+		alert("FAB was clicked")
+	}
+
 
 	// TEMP : add random amount on click
 	handleOverviewClick(key){
@@ -119,48 +127,39 @@ class App extends React.Component {
       		let overviewDataStatus = {...this.state.overviewDataStatus}
       		overviewDataStatus.upToDate = false;
 			this.setState({overviewDataStatus:overviewDataStatus})	
-		}else this.saveOverviewData();	
+		}else DB.saveOverviewData(this);	
 	}
 
-	// Save overview data
-	saveOverviewData() {
-      	let overviewDataStatus = {...this.state.overviewDataStatus}
-      	overviewDataStatus.saving = true;
-		overviewDataStatus.upToDate = true;
-		this.setState({overviewDataStatus:overviewDataStatus});
-
-	    DB.saveOverviewData(this.state.year, this.state.overviewData)
-	    .then((res) => {
-	    	if(this.state.overviewDataStatus.upToDate === false){
-	    		this.saveOverviewData();
-	    	}else{
-		      	let overviewDataStatus = {...this.state.overviewDataStatus}
-		      	overviewDataStatus.saving = false;
-	    		this.setState({overviewDataStatus:overviewDataStatus})	
-	    	}	      	
-	    })
-	    .catch(err => console.log(err));
-
-	}
 
 	render() {
 
 		let status = ""
-		if(!this.state.overviewDataStatus.loaded) status = "Data not loaded."
+		if(!this.state.overviewDataStatus.loaded) status = "Data is loading."
 		else if(!this.state.overviewDataStatus.upToDate) status = "Data requires saving."
 		else if(this.state.overviewDataStatus.saving) status = "Data is saving."
 		else status = "Data is up-to-date."
 
 		return ([
-			<Overview key="overview"
-				year={this.state.year} 
-				months={this.state.months}
-				categories={this.state.categories}
-				columns={this.state.columns}
-				data={this.state.overviewData} 
-				onClick={(key) => this.handleOverviewClick(key)}
-			/>,
-			<p key="status" >Overview : {status}</p>
+			<UI
+			sectionName={"Balance annuelle"}
+			drawerName={"Janvier"}
+			year={this.state.year}
+			onYearChange={(year) => this.handleYearChange(year)}
+			onFABClick={(year) => this.handleFABClick()}
+			>
+				<div>
+					<Overview key="overview"
+					year={this.state.year} 
+					months={this.state.months}
+					categories={this.state.categories}
+					columns={this.state.columns}
+					data={this.state.overviewData} 
+					onClick={(key) => this.handleOverviewClick(key)}
+					/>
+					<p key="status" >Overview : {status}</p>
+				</div>
+				<div>Hello World</div>
+			</UI>			
 		]);
 	}
 }

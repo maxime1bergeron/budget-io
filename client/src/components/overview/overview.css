@@ -1,12 +1,13 @@
 .overview {
 	position: relative;
-	user-select: none;
+	user-select: none;	
+	font-family: 'Open Sans', sans-serif;
 }
 .overview + .overview {
 	margin-top: 30px;
 }
 .overview-scroller {
-	width: 1053px;
+	width: 1042px;
 	overflow-x: scroll;
 	overflow-y: visible;
 	margin-left:111px;
@@ -29,7 +30,7 @@
 .overview-table th:first-child,
 .overview-table td:first-child {
 	position:absolute;
-	width:100px;
+	width:113px;
 	z-index:1;
 	left:0;
 	text-align:right;
@@ -43,7 +44,7 @@
 }
 .overview-total .overview-table th, 
 .overview-total .overview-table td {
-	min-width:70px;
+	min-width:80px;
 }
 
 .overview:not(.overview-total) .overview-table tbody tr:hover td:before{
