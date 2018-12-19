@@ -7,7 +7,6 @@
 	margin-top: 30px;
 }
 .overview-scroller {
-	width: 1042px;
 	overflow-x: scroll;
 	overflow-y: visible;
 	margin-left:111px;
@@ -21,11 +20,11 @@
 	word-wrap: nowrap;
 }
 
-.overview-total .overview-scroller {
+/*.overview-total .overview-scroller {
 	width:auto;
 	overflow-x:visible;
 	padding:0;
-}
+}*/
 
 .overview-table th:first-child,
 .overview-table td:first-child {
@@ -57,7 +56,8 @@
 	height: 100%;
 	background-color: rgba(150,150,150,0.25);
 } 
-.overview-table tbody td:not(.overview-month):not(.overview-title-column):not(.overview-total-column):not(.overview-spending-title):not(.overview-spending-total):not(.overview-revenue-title):not(.overview-revenue-total):hover {
+.overview-total .overview-table tbody td:not(:last-child):not(:first-child):hover,
+.overview:not(.overview-total) .overview-table tbody td:not(:first-child):hover {
 	border: 1px solid rgba(0,0,0,0.5);
 	cursor:pointer;
 }
@@ -92,8 +92,16 @@
 .overview-table .overview-subtotal {
 	font-weight: 600;
 }
+.overview-table .overview-month:hover:not(:last-child) {
+	border: 1px solid #666;
+	cursor:pointer;
+}
 .overview-table .overview-total-row .overview-total-tag {
 	text-align: right;
+}
+
+.overview-total .overview-revenus {
+	display: none;
 }
 
 .overview-spending-title,
@@ -152,3 +160,8 @@
 .overview-table .overview-title-column.overview-personnel,
 .overview-table .overview-total-row .overview-personnel,
 .overview-table .overview-total-column.overview-personnel { background-color: #68a94f; }
+.overview-table .overview-revenus { background-color: #eee; }
+.overview-table .overview-title-row .overview-revenus,
+.overview-table .overview-title-column.overview-revenus,
+.overview-table .overview-total-row .overview-revenus,
+.overview-table .overview-total-column.overview-revenus { background-color: #aaa; }

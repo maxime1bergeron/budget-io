@@ -6,7 +6,6 @@ import Drawer from '@material-ui/core/Drawer';
 import AppBar from '@material-ui/core/AppBar';
 import Toolbar from '@material-ui/core/Toolbar';
 import MenuItem from '@material-ui/core/MenuItem';
-import OutlinedInput from '@material-ui/core/OutlinedInput';
 import FormControl from '@material-ui/core/FormControl';
 import Select from '@material-ui/core/Select';
 import List from '@material-ui/core/List';
@@ -116,6 +115,7 @@ const styles = theme => ({
     marginBottom: theme.spacing.unit * 3,
   },
   content: {
+    width:960,
     flexGrow: 1,
     padding: theme.spacing.unit * 5,
     paddingTop: theme.spacing.unit * 5 + 64,
@@ -274,7 +274,13 @@ class UI extends React.Component {
             {this.props.children[1]}
           </div>
         </Drawer>  
-         <Button variant="fab" color="primary" aria-label="Add" className={classes.button, classes.fab} onClick={() => this.props.onFABClick()}>
+         <Button 
+         variant="fab" 
+         color="primary" 
+         aria-label="Add" 
+         className={classes.fab} 
+         onClick={() => this.props.onFABClick()}
+         >
             <AddIcon />
           </Button>  
       </div>
