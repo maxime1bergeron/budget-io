@@ -148,9 +148,7 @@ app.post('/api/transactions/*', (req, res) => {
 			const data = req.body.data;
 			if(data){
 
-				let headers = ["period"];
 				let body = data;
-
 				let header_string = "id,category,subcategory,amount,date,provider,group,details";
 
 				const directory = dataFolder + year + "/";
@@ -181,6 +179,136 @@ app.post('/api/transactions/*', (req, res) => {
 	}else{
 		res.status(400);
 		res.json({error:"Period not provided in request"});		
+	}
+});
+
+// PROVIDERS GET API : 
+// Used to load providers data for a specified year
+app.get('/api/providers/*', (req, res) => {
+	const year = req.params[0];
+	if(year){
+		const file = dataFolder + year + "/" + year + "-providers.csv";
+		if(fs.existsSync(file)){
+			csvdata.load(file, {objName: 'name'}).then(
+				function(result) {
+					res.status(200);
+					res.json(result);
+				},
+				function(err){
+					console.log(err)
+					res.status(500);
+					res.json({"error":err});
+				}
+			);
+		}else{
+			res.status(204).end();
+		}
+	}else{
+		res.status(400);
+		res.json({error:"Year not provided in request"});		
+	}
+});
+
+// PROVIDERS POST API : 
+// Used to save providers data for a specified year
+app.post('/api/providers/*', (req, res) => {
+	const year = req.params[0];
+	if(year){
+		const data = req.body.data;
+		if(data){
+
+			let body = data;
+			let header_string = "name,description,spending,revenue,total,transactions";
+
+			const directory = dataFolder + year + "/";
+			const file = directory + year + "-providers.csv";
+			
+			if(!fs.existsSync(directory)) fs.mkdirSync(directory);
+			if(fs.existsSync(file)) fs.closeSync(fs.openSync(file, 'w'));
+
+			csvdata.write(file, body, {header:header_string}).then(
+				function(result) {
+					res.status(204).end();
+				},
+				function(err){
+					console.log(err)
+					res.status(500);
+					res.json({"error":err});
+				}
+			);
+
+		}else{
+			res.status(400);
+			res.json({error:"Data not provided in request"});	
+		}
+	}else{
+		res.status(400);
+		res.json({error:"Year not provided in request"});		
+	}
+});
+
+// GROUPS GET API : 
+// Used to load groups data for a specified year
+app.get('/api/groups/*', (req, res) => {
+	const year = req.params[0];
+	if(year){
+		const file = dataFolder + year + "/" + year + "-groups.csv";
+		if(fs.existsSync(file)){
+			csvdata.load(file, {objName: 'name'}).then(
+				function(result) {
+					res.status(200);
+					res.json(result);
+				},
+				function(err){
+					console.log(err)
+					res.status(500);
+					res.json({"error":err});
+				}
+			);
+		}else{
+			res.status(204).end();
+		}
+	}else{
+		res.status(400);
+		res.json({error:"Year not provided in request"});		
+	}
+});
+
+// GROUPS POST API : 
+// Used to save groups data for a specified year
+app.post('/api/groups/*', (req, res) => {
+	const year = req.params[0];
+	if(year){
+		const data = req.body.data;
+		if(data){
+
+			let body = data;
+			let header_string = "name,description,spending,revenue,total,transactions";
+
+			const directory = dataFolder + year + "/";
+			const file = directory + year + "-groups.csv";
+			
+			if(!fs.existsSync(directory)) fs.mkdirSync(directory);
+			if(fs.existsSync(file)) fs.closeSync(fs.openSync(file, 'w'));
+
+			csvdata.write(file, body, {header:header_string}).then(
+				function(result) {
+					res.status(204).end();
+				},
+				function(err){
+					console.log(err)
+					res.status(500);
+					res.json({"error":err});
+				}
+			);
+
+		}else{
+			res.status(400);
+			res.json({error:"Data not provided in request"});	
+		}
+	}else{
+		res.status(400);
+		res.json({error:"Year not provided in request"});		
 	}
 });
 

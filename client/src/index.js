@@ -23,6 +23,11 @@ function uuidv4() {
 }
 
 class App extends React.Component {
+
+	/*********************/
+	/** DATA MANAGEMENT **/
+	/*********************/
+
 	constructor(props){
 		super(props);
 
@@ -73,6 +78,8 @@ class App extends React.Component {
 			months: months, 
 			categories: categories, 
 			subcategories: subcategories,
+			providers: [],
+			groups: [],
 
 			year: (new Date()).getFullYear(),
 			month: (new Date()).getMonth(),
@@ -80,15 +87,21 @@ class App extends React.Component {
 			subcategory:"",
 
 			transactionFormOpen: false,
+			transactionFormPreviousId: null,
+			transactionFormPreviousSource: null,
 			transactionFormInitialData: {
 				category:"",
 				subcategory:"",
+				amount:"",
 				date:DateTime.local(),
+				provider:"",
+				group:"",
+				details:""
 			},
 			
 			overviewData: {},
-			providersData: [],			
-			groupsData: [],			
+			providersData: {},			
+			groupsData: {},			
 			transactionsData01: {},			
 			transactionsData02: {},			
 			transactionsData03: {},			
@@ -125,7 +138,9 @@ class App extends React.Component {
 	// Load data 
 	componentDidMount() {
 	    DB.loadOverview(this.state.year, this);
-	    for (let month=1; month<=12; month++) {
+	    DB.loadProviders(this.state.year, this);
+	    DB.loadGroups(this.state.year, this);
+	    for (let month=0; month<12; month++) {
 	    	DB.loadTransactions(this.state.year, month, this);
 	    }
 	}
@@ -152,10 +167,17 @@ class App extends React.Component {
 
 		// Load new overview data
 	    DB.loadOverview(year, this);
+	    DB.loadProviders(year, this);
+	    DB.loadGroups(year, this);
 	    for (let month=1; month<=12; month++) {
 	    	DB.loadTransactions(year, month, this);
 	    }
 	}
+
+
+	/*******************/
+	/** UI MANAGEMENT **/
+	/*******************/
 
 	// Set transaction drawer
 	handleOverviewClick(month, category, subcategory){
@@ -170,10 +192,16 @@ class App extends React.Component {
 	handleFABClick(){
 		this.setState({
 			transactionFormOpen: true,
+			transactionFormPreviousId: null,
+			transactionFormPreviousSource: null,
 			transactionFormInitialData: {
 				category:"",
 				subcategory:"",
+				amount:"",
 				date:DateTime.local(),
+				provider:"",
+				group:"",
+				details:""
 			},
 		})
 	}
@@ -182,10 +210,16 @@ class App extends React.Component {
 	handleDrawerCTAClick(){
 		this.setState({
 			transactionFormOpen: true,
+			transactionFormPreviousId: null,
+			transactionFormPreviousSource: null,
 			transactionFormInitialData: {
 				category:this.state.category,
 				subcategory:this.state.subcategory,
-				date:DateTime.local(this.state.year, this.state.month+1,2).toFormat('yyyy-MM-dd:HH:mm:ss.SSS')+'Z',
+				amount:"",
+				date:DateTime.local(this.state.year, this.state.month+1,1).toFormat('yyyy-MM-dd:HH:mm:ss.SSS'),
+				provider:"",
+				group:"",
+				details:""
 			},
 		})
 	}
@@ -197,97 +231,154 @@ class App extends React.Component {
 		})	
 	}	
 
-	// Update the overview based on a new transaction
-	updateOverview(transaction, transactionType){
-		const date = transaction.date.c;
-		const period = date.year + "" + ((date.month < 10)? "0" + date.month : date.month);
+
+	/*****************************/
+	/** TRANSACTIONS MANAGEMENT **/
+	/*****************************/
+
+	// Add a new transaction 
+	handleTransactionFormSave(transactionData){
+		this.handleTransactionFormClose();
+
+		// Get transaction details from form data
+		let date;
+		if(DateTime.isDateTime(transactionData.date)) date = transactionData.date;
+		else date = DateTime.fromFormat(transactionData.date, "yyyy-MM-dd:HH:mm:ss.SSS");
+		const monthlabel = (((date.month < 10)? "0" + date.month : date.month)).toString();
+
+		const transactionType = this.getTransactionType(transactionData.category);
+
+		const transaction = {
+			id: uuidv4(),
+			type: transactionType,
+			category:transactionData.category,
+			subcategory:transactionData.subcategory,
+			amount:(transactionType === "revenue")? transactionData.amount : -transactionData.amount,
+			date:date.ts,
+			provider:encodeURIComponent(transactionData.provider.label),
+			group:(typeof(transactionData.group) == "object" && typeof(transactionData.group.label) == "string")? encodeURIComponent(transactionData.group.label) : "",
+			details:encodeURIComponent(transactionData.details),
+			year:this.state.year,
+			month:date.month-1,
+			monthlabel: monthlabel,
+			period: this.state.year + monthlabel
+		}
+
+		// Get the up-to-date data
+		let _transactions = {...this.state["transactionsData"+monthlabel]};
+		let _overview = {...this.state.overviewData};
+		let _providers = {...this.state.providersData};
+		let _groups = {...this.state.groupsData};
+
 		
-		let data = {...this.state.overviewData};
-
-		// REVENUE
-		if(transactionType === "revenue"){
-
-			let keys = [];
-			keys.push(this.state.year+"."+transaction.category+"-"+transaction.subcategory);
-			keys.push(this.state.year+"."+transaction.category);
-			keys.push(period+"."+transaction.category+"-"+transaction.subcategory);
-			keys.push(period+"."+transaction.category);
-
-			for (let i=0; i<keys.length; i++) {
-				data[keys[i]] = (data[keys[i]])? data[keys[i]] + transaction.amount : transaction.amount;
+		// If we modify an existing transaction, we need to remove the old transaction first
+		if(this.state.transactionFormPreviousId !== null){
+			const previousTransaction = this.getTransactionFromId(this.state.transactionFormPreviousId, this.state.transactionFormPreviousSource);
+			
+			if(previousTransaction.monthlabel === monthlabel){
+				_transactions = this.removeTransaction(_transactions, previousTransaction);
 			}
-
-			// Different calculation for total
-			data[period+".total"] = (data[period+".total"])? data[period+".total"] + transaction.amount : transaction.amount;
-			data[this.state.year+".total"] = (data[this.state.year+".total"])? data[this.state.year+".total"] + transaction.amount : transaction.amount;
-
-		//SPENDINGS
-		}else{
-
-			let keys = [];
-			keys.push(this.state.year+"."+transaction.category+"-"+transaction.subcategory);
-			keys.push(this.state.year+"."+transaction.category);
-			keys.push(this.state.year+".spending");
-			keys.push(period+"."+transaction.category+"-"+transaction.subcategory);
-			keys.push(period+"."+transaction.category);
-			keys.push(period+".spending");
-
-			for (let i=0; i<keys.length; i++) {
-				data[keys[i]] = (data[keys[i]])? data[keys[i]] + transaction.amount : transaction.amount;
-			}
-
-			// Different calculation for total
-			data[period+".total"] = (data[period+".total"])? data[period+".total"] - transaction.amount : -transaction.amount;
-			data[this.state.year+".total"] = (data[this.state.year+".total"])? data[this.state.year+".total"] - transaction.amount : -transaction.amount;
-
+			else{
+				let _transactions2 = {...this.state["transactionsData"+previousTransaction.monthlabel]};
+				_transactions2 = this.removeTransaction(_transactions2, previousTransaction);
+				this.saveTransactions(_transactions2, previousTransaction);
+			} 
+			
+			_overview = this.updateOverview(_overview, previousTransaction, "remove");
+			_providers = this.updateProviders(_providers, previousTransaction, "remove");
+			_groups = this.updateGroups(_groups, previousTransaction, "remove");
 		}
 
-		this.setState({ overviewData: data });
-
-		if(this.state.overviewDataStatus.saving){
-      		let overviewDataStatus = {...this.state.overviewDataStatus}
-      		overviewDataStatus.upToDate = false;
-			this.setState({overviewDataStatus:overviewDataStatus})	
-		}else DB.saveOverview(this.state.year, data, this);	
-	}
-
-	// Save a new transaction
-	addTransaction(transaction, transactionType){
-		const date = transaction.date.c;
-		const monthlabel = ((date.month < 10)? "0" + date.month : date.month);
-
-		const transactionData = {
-			id:uuidv4(),
-			category:transaction.category,
-			subcategory:transaction.subcategory,
-			amount:(transactionType === "revenue")? transaction.amount : -transaction.amount,
-			date:transaction.date.ts,
-			provider:encodeURIComponent(transaction.provider.label),
-			group:(typeof transaction.group == "object")? encodeURIComponent(transaction.group.label) : "",
-			details:encodeURIComponent(transaction.details)
-		}
-
-		let data = {...this.state["transactionsData"+monthlabel]}
-		data[transactionData.id] = transactionData;
-		this.setState({["transactionsData"+monthlabel]:data}); 
-
-		if(this.state["transactionsData"+monthlabel+"Status"].saving){
-      		let transactionDataStatus = {...this.state["transactionsData"+monthlabel+"Status"]}
-      		transactionDataStatus.upToDate = false;
-			this.setState({["transactionsData"+monthlabel+"Status"]:transactionDataStatus})	
-		}else DB.saveTransactions(this.state.year, date.month-1, data, this);	
+		// Add the transaction
+		_transactions = this.addTransaction(_transactions, transaction);
+		_overview = this.updateOverview(_overview, transaction, "add");
+		_providers = this.updateProviders(_providers, transaction, "add");
+		_groups = this.updateGroups(_groups, transaction, "add");	
+		
+		// Save and mutate the data
+		this.saveTransactions(_transactions, transaction);
+		this.saveOverview(_overview, transaction);
+		this.saveProviders(_providers, transaction);
+		this.saveGroups(_groups, transaction);	
 
 	}
 
 	// Add a new transaction 
-	handleTransactionFormSave(transaction){
-		this.handleTransactionFormClose();
+	handleOptionMenuClick(action, transactionId, source){
 
-		const transactionType = this.getTransactionType(transaction.category);
-		this.addTransaction(transaction, transactionType);
-		this.updateOverview(transaction, transactionType);
+		const transaction = this.getTransactionFromId(transactionId, source);
+
+		if(action === "remove"){
+			
+			// Get the data
+			let _transactions = {...this.state["transactionsData"+transaction.monthlabel]};
+			let _overview = {...this.state.overviewData};
+			let _providers = {...this.state.providersData};
+			let _groups = {...this.state.groupsData};
+
+			// Update the data
+			this.removeTransaction(_transactions, transaction);
+			this.updateOverview(_overview, transaction, "remove");
+			this.updateProviders(_providers, transaction, "remove");
+			this.updateGroups(_groups, transaction, "remove");
+
+			// Save the data
+			this.saveTransactions(_transactions, transaction);
+			this.saveOverview(_overview, transaction);
+			this.saveProviders(_providers, transaction);
+			this.saveGroups(_groups, transaction);	
+
+		}
+
+		else if(action === "modify"){
+			this.setState({
+			transactionFormOpen: true,
+			transactionFormPreviousId: transaction.id,
+			transactionFormPreviousSource: source,
+			transactionFormInitialData: {
+				category:transaction.category,
+				subcategory:transaction.subcategory,
+				amount:Math.abs(transaction.amount),
+				date:DateTime.fromMillis(transaction.date).toFormat('yyyy-MM-dd:HH:mm:ss.SSS'),
+				provider:decodeURIComponent(transaction.provider),
+				group:decodeURIComponent(transaction.group),
+				details:decodeURIComponent(transaction.details)
+			},
+		})
+		}
 	}
 
+	// Get the data from a transaction using its id
+	getTransactionFromId(transactionId, source){
+		const transactionData = this.state[source][transactionId];
+		
+		if(typeof(transactionData) == "object"){
+
+			const transaction = {
+				id: transactionId,
+				type: this.getTransactionType(transactionData.category),
+				category:transactionData.category,
+				subcategory:transactionData.subcategory,
+				amount:transactionData.amount,
+				date:transactionData.date,
+				provider:transactionData.provider,
+				group:transactionData.group,
+				details:transactionData.details,
+				year:this.state.year,
+				month:parseInt(source.slice(-2)-1),
+				monthlabel: source.slice(-2),
+				period: this.state.year + source.slice(-2)
+			}
+
+			return transaction;
+
+		}
+
+		return null;
+
+	}
+
+	// Get wether a transaction is a spending or revenue based on its category
 	getTransactionType(_category){
 		let type = null;
 		this.state.categories.map(function(category, i){
@@ -298,6 +389,218 @@ class App extends React.Component {
 		return type;
 	}
 
+	// Save a new transaction
+	addTransaction(data, transaction){
+
+		// Build transaction data to save
+		const transactionData = {
+			id:transaction.id,
+			category:transaction.category,
+			subcategory:transaction.subcategory,
+			amount:transaction.amount,
+			date:transaction.date,
+			provider:transaction.provider,
+			group:transaction.group,
+			details:transaction.details
+		}
+
+		data[transaction.id] = transactionData;
+		return data;
+
+	}
+
+	// Remove a transaction
+	removeTransaction(data, transaction){
+		delete data[transaction.id];
+		return data;
+	}
+
+	// Save the transactions to the database
+	saveTransactions(data, transaction){
+		this.setState({["transactionsData"+transaction.monthlabel]:data}); 
+		if(this.state["transactionsData"+transaction.monthlabel+"Status"].saving){
+      		let transactionDataStatus = {...this.state["transactionsData"+transaction.monthlabel+"Status"]}
+      		transactionDataStatus.upToDate = false;
+			this.setState({["transactionsData"+transaction.monthlabel+"Status"]:transactionDataStatus})	
+		}else DB.saveTransactions(transaction.year, transaction.month, data, this);	
+	}
+
+
+	// Update the overview
+	updateOverview(data, transaction, action){
+
+		// Manage addition or removal of transactions
+		let transactionAmount = transaction.amount;
+		let transactionAbsAmount = Math.abs(transaction.amount);
+		if(action === "remove"){
+			transactionAmount =	-transactionAmount;
+			transactionAbsAmount = -transactionAbsAmount;
+		}
+
+		// Update totals
+		let keys = [];
+		keys.push(transaction.year+"."+transaction.category+"-"+transaction.subcategory);
+		keys.push(transaction.year+"."+transaction.category);
+		keys.push(transaction.period+"."+transaction.category+"-"+transaction.subcategory);
+		keys.push(transaction.period+"."+transaction.category);
+
+		if(transaction.type === "spending"){
+			keys.push(transaction.year+".spending");
+			keys.push(transaction.period+".spending");
+		}
+
+		// Keep absolute count for categories and subcategories (spending or revenue)
+		for (let i=0; i<keys.length; i++) {
+			data[keys[i]] = (data[keys[i]])? data[keys[i]] + transactionAbsAmount : transactionAbsAmount;
+		}
+
+		// Calculate year and period totals (revenue - spending)
+		data[transaction.period+".total"] = (data[transaction.period+".total"])? data[transaction.period+".total"] + transactionAmount : transactionAmount;
+		data[transaction.year+".total"] = (data[transaction.year+".total"])? data[transaction.year+".total"] + transactionAmount : transactionAmount;
+		
+		return data;
+
+	}
+
+	// Save the overview to the database
+	saveOverview(data, transaction){
+		this.setState({ overviewData: data });
+		if(this.state.overviewDataStatus.saving){
+      		let overviewDataStatus = {...this.state.overviewDataStatus}
+      		overviewDataStatus.upToDate = false;
+			this.setState({overviewDataStatus:overviewDataStatus})	
+		}else DB.saveOverview(transaction.year, data, this);	
+	}
+	
+	// Update the providers data
+	updateProviders(data, transaction, action){
+		if(transaction.provider === "") return data;
+
+		// Manage addition or removal of transactions
+		let transactionAmount = transaction.amount;
+		let transactionAbsAmount = Math.abs(transaction.amount);
+		if(action === "remove"){
+			transactionAmount =	-transactionAmount;
+			transactionAbsAmount = -transactionAbsAmount;
+		}
+
+		// Update provider
+		if(typeof(data[transaction.provider]) == "object"){
+			if(transaction.type === "spending") data[transaction.provider].spending += transactionAbsAmount;
+			if(transaction.type === "revenue") data[transaction.provider].revenue += transactionAbsAmount;
+			data[transaction.provider].total += transactionAmount;
+			
+			if(action === "add"){
+				data[transaction.provider].transactions += (data[transaction.provider].transactions !== "")? ";" + transaction.period + ":" + transaction.id : transaction.period + ":" + transaction.id;
+			}
+			else if(action === "remove"){
+				data[transaction.provider].transactions = data[transaction.provider].transactions.replace(";" + transaction.period + ":" + transaction.id, "");
+				data[transaction.provider].transactions = data[transaction.provider].transactions.replace(transaction.period + ":" + transaction.id + ";", "");
+				data[transaction.provider].transactions = data[transaction.provider].transactions.replace(transaction.period + ":" + transaction.id, "");
+			}
+		}
+
+		// Add new provider
+		else if(action === "add"){
+
+			data[transaction.provider] = {
+				name : transaction.provider,
+				description: "", 
+				spending: (transaction.type === "spending")? transactionAbsAmount : 0,
+				revenue: (transaction.type === "revenue")? transactionAbsAmount : 0,
+				total: transactionAmount,
+				transactions : transaction.period + ":" + transaction.id,
+			}
+
+			let providersList = [...this.state.providers];
+			providersList.push({
+				label:decodeURIComponent(transaction.provider),
+				value:decodeURIComponent(transaction.provider),
+			});
+			this.setState({ providers: providersList });
+		}
+
+		return data;	
+
+	}
+
+	// Save the providers to the database
+	saveProviders(data, transaction){
+		this.setState({ providersData: data });
+		if(this.state.providersDataStatus.saving){
+      		let providersDataStatus = {...this.state.providersDataStatus}
+      		providersDataStatus.upToDate = false;
+			this.setState({providersDataStatus:providersDataStatus})	
+		}else DB.saveProviders(transaction.year, data, this);
+	}
+
+	// Update the groups data
+	updateGroups(data, transaction, action){
+		if(transaction.group === "") return data;
+		
+		// Manage addition or removal of transactions
+		let transactionAmount = transaction.amount;
+		let transactionAbsAmount = Math.abs(transaction.amount);
+		if(action === "remove"){
+			transactionAmount =	-transactionAmount;
+			transactionAbsAmount = -transactionAbsAmount;
+		}
+
+		// Update group
+		if(typeof(data[transaction.group]) == "object"){
+			if(transaction.type === "spending") data[transaction.group].spending += transactionAbsAmount;
+			if(transaction.type === "revenue") data[transaction.group].revenue += transactionAbsAmount;
+			data[transaction.group].total += transactionAmount;
+			
+			if(action === "add"){
+				data[transaction.group].transactions += (data[transaction.group].transactions !== "")? ";" + transaction.period + ":" + transaction.id : transaction.period + ":" + transaction.id;
+			}
+			else if(action === "remove"){
+				data[transaction.group].transactions = data[transaction.group].transactions.replace(";" + transaction.period + ":" + transaction.id, "");
+				data[transaction.group].transactions = data[transaction.group].transactions.replace(transaction.period + ":" + transaction.id + ";", "");
+				data[transaction.group].transactions = data[transaction.group].transactions.replace(transaction.period + ":" + transaction.id, "");
+			}
+		}
+
+		// Add new group
+		else if(action === "add"){
+
+			data[transaction.group] = {
+				name : transaction.group,
+				description: "", 
+				spending: (transaction.type === "spending")? transactionAbsAmount : 0,
+				revenue: (transaction.type === "revenue")? transactionAbsAmount : 0,
+				total: transactionAmount,
+				transactions : transaction.period + ":" + transaction.id,
+			}
+
+			let groupsList = [...this.state.groups];
+			groupsList.push({
+				label:decodeURIComponent(transaction.group),
+				value:decodeURIComponent(transaction.group),
+			});
+			this.setState({ groups: groupsList });
+		}
+
+		return data;
+
+	}
+
+	// Save the groups to the database
+	saveGroups(data, transaction){
+		this.setState({ groupsData: data });
+		if(this.state.groupsDataStatus.saving){
+      		let groupsDataStatus = {...this.state.groupsDataStatus}
+      		groupsDataStatus.upToDate = false;
+			this.setState({groupsDataStatus:groupsDataStatus})	
+		}else DB.saveGroups(transaction.year, data, this);	
+	}
+	
+
+
+	/************/
+	/** RENDER **/
+	/************/
 	render() {
 
 		let status = ""
@@ -334,6 +637,7 @@ class App extends React.Component {
 				months={this.state.months}
 				data={this.state['transactionsData'+((this.state.month<9)?"0"+(this.state.month+1):(this.state.month+1))]}
 				onCTA={() => this.handleDrawerCTAClick()}
+				onOptionMenuClick={(action, id) => this.handleOptionMenuClick(action, id, 'transactionsData'+((this.state.month<9)?"0"+(this.state.month+1):(this.state.month+1)))}
 				/>
 				</UI>	
 				<TransactionForm key="root-transactionform"
@@ -342,11 +646,10 @@ class App extends React.Component {
 				onSave={(transaction) => this.handleTransactionFormSave(transaction)}
 				categories={this.state.categories}
 				subcategories={this.state.subcategories}	
-				providers={this.state.providersData}
-				groups={this.state.groupsData}
-				category={this.state.transactionFormInitialData.category}
-				subcategory={this.state.transactionFormInitialData.subcategory}	
-				date={this.state.transactionFormInitialData.date}	
+				providers={this.state.providers}
+				groups={this.state.groups}
+				initialData={this.state.transactionFormInitialData}
+				year={this.state.year}
 				/>
             </MuiPickersUtilsProvider>  
 		);

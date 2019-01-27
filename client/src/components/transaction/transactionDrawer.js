@@ -6,7 +6,11 @@ import Avatar from '@material-ui/core/Avatar';
 import Card from '@material-ui/core/Card';
 import CardContent from '@material-ui/core/CardContent';
 import Typography from '@material-ui/core/Typography';
+import IconButton from '@material-ui/core/IconButton';
 import Button from '@material-ui/core/Button';
+import MoreVertIcon from '@material-ui/icons/MoreVert';
+import Menu from '@material-ui/core/Menu';
+import MenuItem from '@material-ui/core/MenuItem';
 
 
 const styles = theme => ({
@@ -14,8 +18,16 @@ const styles = theme => ({
     minWidth: 275,
     marginBottom: 12,
   },
+  cardOptionButtons: {
+    float:'right',
+    top:-7,
+    right:-10,
+  },
   title: {
     fontSize: 14,
+  },
+  amount: {
+    marginTop:5, 
   },
   provider: {
     marginTop: 3,
@@ -59,6 +71,10 @@ const styles = theme => ({
     marginTop:20,
     left:'50%',
     transform:'translateX(-50%)'
+  },
+  transactionsInfos: {
+    fontSize: 4,
+    marginBottom: 20,
   }
 });
 
@@ -159,40 +175,50 @@ function TransactionAmount(props){
 
 function TransactionCard(props){
     return(
-      <Card className={props.classes.card}>
-      <CardContent>
-        
-        <TransactionAmount 
-        classes={props.classes}
-        amount={props.amount}
-        />
+      <Card className={props.classes.card}>           
+        <CardContent>
 
-        <Avatar className={props.classes.categoryAvatar} style={avatarClasses[props.category]} />
-        <Typography className={props.classes.provider} component="p">
-          {props.subcategoryname} / {props.provider}
-        </Typography>
+          <IconButton 
+          className={props.classes.cardOptionButtons}
+          onClick={(e) => props.onOptionMenuOpenClick(e)}
+          >
+            <MoreVertIcon/>
+          </IconButton>          
 
-        <Typography className={props.classes.title} gutterBottom>
-          {(new Date(parseInt(props.date))).getDate() + " " + props.months[(new Date(parseInt(props.date))).getMonth()] + " " + (new Date(parseInt(props.date))).getFullYear()}
-        </Typography>
+          <TransactionAmount 
+          className={props.classes.amount}
+          classes={props.classes}
+          amount={props.amount}
+          />
 
-        <TransactionGroup 
-        classes={props.classes}
-        group={props.group} 
-        />
+          <Avatar className={props.classes.categoryAvatar} style={avatarClasses[props.category]} />
+          <Typography className={props.classes.provider} component="p">
+            {props.subcategoryname} / {props.provider}
+          </Typography>
 
-        <TransactionDetails 
-        classes={props.classes}
-        details={props.details} 
-        />
-      </CardContent>
-    </Card>
+          <Typography className={props.classes.title} gutterBottom>
+            {(new Date(parseInt(props.date))).getDate() + " " + props.months[(new Date(parseInt(props.date))).getMonth()] + " " + (new Date(parseInt(props.date))).getFullYear()}
+          </Typography>
+
+          <TransactionGroup 
+          classes={props.classes}
+          group={props.group} 
+          />
+
+          <TransactionDetails 
+          classes={props.classes}
+          details={props.details} 
+          />
+        </CardContent>
+      </Card>
     )
 }
 
 function TransactionCards(props){
 
   let numberOfCards = 0;
+  let revenus = 0;
+  let spending = 0;
   let cards = [];
 
   Object.keys(props.data).sort(sortTransactions(props.data)).map((transaction,_) => {
@@ -201,6 +227,9 @@ function TransactionCards(props){
     if((props.category === "spending" && data.category !== "revenus") ||
       ((props.category === "" || (data.category === props.category)) &&
        (props.subcategory === "" || (data.subcategory === props.subcategory)))) {
+
+      if(data.category === "revenus") revenus += data.amount;
+      else spending += data.amount;
 
       numberOfCards++;
       cards.push(
@@ -215,6 +244,7 @@ function TransactionCards(props){
         subcategoryname={props.subcategories[data.category+"-"+data.subcategory]}
         group={decodeURIComponent(data.group)}
         details={decodeURIComponent(data.details)}
+        onOptionMenuOpenClick={(e) => props.onOptionMenuOpenClick(e, data.id)}
         />
       );
 
@@ -225,6 +255,14 @@ function TransactionCards(props){
 
 
   if(numberOfCards > 0){
+    cards.unshift(
+      <div className={props.classes.transactionsInfos} key="transactions-infos">
+        <Typography component="p">
+          <b>{(numberOfCards>1)? numberOfCards + " transactions" : "1 transaction"}</b><br/>
+          {"Total : " + (revenus+spending).toFixed(2) + " $"}
+        </Typography>
+      </div>
+    )
     return cards;
   }else{
     return (
@@ -264,10 +302,24 @@ class TransactionDrawer extends React.Component {
 
     this.state = { 
       categories: categories,
-      subcategories: subcategories  
+      subcategories: subcategories,  
+      optionsMenuAnchorEl: null,
     }
 
   }  
+
+  handleOptionMenuOpenClick = (event, id) => {
+    this.setState({ 
+      optionsMenuAnchorEl: event.currentTarget,
+      optionMenuCardID: id
+    });
+  };
+
+  handleOptionMenuClose = (action, callback) => {
+    if(typeof(callback) === "function")
+      callback(action, this.state.optionMenuCardID);
+    this.setState({ optionsMenuAnchorEl: null });
+  };
 
   render() {
     const { classes } = this.props;
@@ -289,6 +341,7 @@ class TransactionDrawer extends React.Component {
         subcategories={this.state.subcategories}
         category={this.props.category}
         subcategory={this.props.subcategory}
+        onOptionMenuOpenClick={(e, id) => this.handleOptionMenuOpenClick(e, id)}
         />
 
         <Button 
@@ -299,6 +352,17 @@ class TransactionDrawer extends React.Component {
         >
           Ajouter une transaction
         </Button>
+
+        <Menu
+          id="simple-menu"
+          anchorEl={this.state.optionsMenuAnchorEl}
+          open={Boolean(this.state.optionsMenuAnchorEl)}
+          onClose={this.handleOptionMenuClose}
+          >
+            <MenuItem onClick={() => this.handleOptionMenuClose("modify", this.props.onOptionMenuClick)}>Modifier</MenuItem>
+            <MenuItem onClick={() => this.handleOptionMenuClose("remove", this.props.onOptionMenuClick)}>Retirer</MenuItem>
+            <MenuItem onClick={() => this.handleOptionMenuClose("adjust", this.props.onOptionMenuClick)}>Ajuster</MenuItem>
+          </Menu>
 
       </div>
       

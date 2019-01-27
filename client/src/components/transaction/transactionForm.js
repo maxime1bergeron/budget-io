@@ -98,7 +98,7 @@ class TransactionForm extends React.Component {
 
   handleEnter() {
 
-    const category = (this.props.category === "spending")? "" : this.props.category;
+    const category = (this.props.initialData.category === "spending")? "" : this.props.initialData.category;
 
     let subcategories = [];
     let subcategoryDisabled = true;
@@ -107,19 +107,33 @@ class TransactionForm extends React.Component {
       subcategoryDisabled = false
     }
 
-    console.log(this.props.date);
+    let provider = this.props.initialData.provider;
+    if(provider !== ""){
+      provider = {
+        label:provider,
+        value:provider,
+      }
+    }
+
+    let group = this.props.initialData.group;
+    if(group !== ""){
+      group = {
+        label:group,
+        value:group,
+      }
+    }
 
     this.setState({
       category:category,
       categories:this.props.categories,
-      subcategory:this.props.subcategory,
+      subcategory:this.props.initialData.subcategory,
       subcategories:subcategories,
       subcategoryDisabled:subcategoryDisabled,      
-      amount:"",
-      date:this.props.date,
-      provider:"",
-      group:"",
-      details:"",
+      amount:this.props.initialData.amount,
+      date:this.props.initialData.date,
+      provider:provider,
+      group:group,
+      details:this.props.initialData.details,
       errors: {},
     })
     this.resetState = this.state;
@@ -144,7 +158,7 @@ class TransactionForm extends React.Component {
       errors.amount = true;
       valid = false;
     }
-    if(this.state.provider === "") {
+    if(this.state.provider === "" || this.state.provider === undefined || (typeof(this.state.provider) === "object" && this.state.provider.length === 0)) {
       errors.provider = true;
       valid = false;
     }
@@ -186,7 +200,7 @@ class TransactionForm extends React.Component {
         disableBackdropClick={true}
         aria-labelledby="form-dialog-title"        
       >
-        <DialogTitle id="form-dialog-title">Enregistrer une dépense</DialogTitle>
+        <DialogTitle id="form-dialog-title">Enregistrer une transaction</DialogTitle>
         <DialogContent className={classes.dialog} >
           <form autoComplete="off">
 
@@ -242,8 +256,8 @@ class TransactionForm extends React.Component {
                 onChange={(value) => this.handleChangeInput('date', value)}
                 animateYearScrolling={false}
                 autoOk
-                minDate={new Date(new Date().getFullYear(), 0, 1)}                  
-                maxDate={new Date(new Date().getFullYear()+1, 0, 0)}
+                minDate={new Date(this.props.year, 0, 1)}                  
+                maxDate={new Date(this.props.year+1, 0, 0)}
                 className={classes.datePicker}
                 />
               </div>
